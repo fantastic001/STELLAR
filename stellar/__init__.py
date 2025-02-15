@@ -431,7 +431,7 @@ class Semantics:
             elif ast.rel == 'or':
                 return left(df) | right(df)
             elif ast.rel == 'not':
-                return ~left(df)
+                return ~ast.negated(df)
         return f
     
     def condition_factor(self, ast):
