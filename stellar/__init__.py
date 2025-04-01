@@ -2,6 +2,8 @@
 import tatsu 
 import pandas as pd 
 import datetime 
+from stellar.config import get_classes_inheriting
+
 
 syntax = """
 
@@ -80,6 +82,37 @@ export sales to "file://sales_transformed.csv"
 """
 import re 
 
+class StellarType:
+    """
+    This represents type of column which it can have.
+    """
+    def evaluate(self):
+        """
+        Returns function taking arguments which returns function taking column which it converts to given type.
+        """
+        raise NotImplementedError("Subclass must implement this method")
+
+    def name(self):
+        raise NotImplementedError("Subclass must implement this method")
+
+    def __call__(self, *args):
+        return self.evaluate()(*args)
+
+class StellarFunction:
+    """
+    This represents function which can be applied to column.
+    """
+    def evaluate(self):
+        """
+        Returns function taking column which it applies to.
+        """
+        raise NotImplementedError("Subclass must implement this method")
+
+    def name(self):
+        raise NotImplementedError("Subclass must implement this method")
+
+    def __call__(self, *args):
+        return self.evaluate()(*args)
 
 class Semantics:
 
@@ -307,29 +340,11 @@ class Semantics:
     
     def function(self, ast):
         name = ast.name
-        fs = {
-            "sample": lambda column: column.sample(frac=1),
-            "mean": lambda column: column.mean(),
-            "sum": lambda column: column.sum(),
-            "count": lambda column: column.count(),
-            "max": lambda column: column.max(),
-            "min": lambda column: column.min(),
-            "std": lambda column: column.std(),
-            "median": lambda column: column.median(),
-            "mode": lambda column: column.mode(),
-            "date": lambda y,m,d: datetime.date(y,m,d),
-            "today": lambda: datetime.date.today(),
-            "substr": lambda column, sep, index: column.apply(lambda x: x.split(sep)[index]) if x is not None else "",
-            "replace": lambda column, old, new: column.str.replace(old, new),
-            "line": lambda column, index: column.apply(lambda x: x.split('\n')[index]),
-            "cast": lambda column, dtype: column.astype(eval(dtype)),
-            "len": lambda column: column.str.len(),
-
-            # types 
-            "not_null_int": lambda: lambda x: int(x) if not pd.isna(x) else 0,
-            "accounting": lambda currency, separator, comma: lambda x: float(x.replace(currency, '').replace(separator, '').replace(comma, ".")) if not pd.isna(x) and x is not None else 0,
-            "parsed_date": lambda format: lambda x: datetime.datetime.strptime(x, format).date() if not pd.isna(x) and x is not None else None,
-        }
+        fs = {}
+        for f in get_classes_inheriting(StellarFunction):
+            fs[f().name()] = f()
+        for t in get_classes_inheriting(StellarType):
+            fs[t().name()] = t()
         def f(df):
             args = []
             if ast.args is not None:
