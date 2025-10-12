@@ -1,0 +1,26 @@
+table sales {
+    id: int,
+    date: date,
+    amount: float,
+    is_paid: bool
+} from "exec://cp" 
+{
+    args: "sales.csv sales.test.csv"
+    output: "sales.test.csv"
+}
+
+
+# filter amount > 10000
+filter amount > 90
+print amount
+
+# let amount = amount * 1.1 if date > date(2020, 1, 1)
+let amount = amount * 1.2 everywhere
+let mean = mean(amount) everywhere 
+
+export sales to "file://sales_transformed.csv"
+export sales to "screen" {
+    groupby: "date"
+    operation: "mean"
+    target: "amount"
+}
