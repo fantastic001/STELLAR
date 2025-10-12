@@ -1,0 +1,18 @@
+# Ignore node_modules directory
+node_modules/
+
+# Ignore compiled output
+out/
+
+# Ignore debugging and workspace files
+.vscode/
+*.code-workspace
+
+# Ignore user-specific settings
+.settings/
+
+# Ignore logs
+*.log
+
+# Ignore build artifacts
+dist/
