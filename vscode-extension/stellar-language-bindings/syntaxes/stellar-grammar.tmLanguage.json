@@ -1,7 +1,7 @@
 {
   "name": "stellar",
   "scopeName": "source.stellar",
-  "fileTypes": [".stellar", ".stl"],
+  "fileTypes": [".stellar", ".stl", ".tt"],
   "patterns": [
     {
       "name": "keyword.control",

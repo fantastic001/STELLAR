@@ -24,7 +24,7 @@
       {
         "id": "stellar",
         "aliases": ["Stellar", "stellar"],
-        "extensions": [".stellar", ".stl"],  
+        "extensions": [".stellar", ".stl", ".tt"],  
         "configuration": "./language-configuration.json"
       }
     ],
