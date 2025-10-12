@@ -3,6 +3,7 @@
   "displayName": "Stellar Language Bindings",
   "description": "Language bindings and syntax highlighting for STELLAR tabular data manipulation language",
   "version": "0.0.1",
+  "publisher": "snstefan5",
   "engines": {
     "vscode": "^1.104.0"
   },
@@ -45,7 +46,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.105.0",
+    "@types/vscode": "^1.104.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
@@ -54,5 +55,9 @@
     "typescript": "^5.8.2",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fantastic001/stellar"
   }
 }
