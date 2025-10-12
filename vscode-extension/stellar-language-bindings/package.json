@@ -1,21 +1,38 @@
 {
   "name": "stellar-language-bindings",
-  "displayName": "STELLAR Language Bindings",
-  "description": "Bindings for STELLAR code",
+  "displayName": "Stellar Language Bindings",
+  "description": "Language bindings and syntax highlighting for STELLAR tabular data manipulation language",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.98.0"
+    "vscode": "^1.104.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:stellar"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "stellar-language-bindings.helloWorld",
         "title": "Hello World"
+      }
+    ],
+    "languages": [
+      {
+        "id": "stellar",
+        "aliases": ["Stellar", "stellar"],
+        "extensions": [".stellar", ".stl"],  
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "stellar",
+        "scopeName": "source.stellar",
+        "path": "./syntaxes/stellar-grammar.tmLanguage.json"
       }
     ]
   },
@@ -28,7 +45,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.98.0",
+    "@types/vscode": "^1.105.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@typescript-eslint/eslint-plugin": "^8.28.0",

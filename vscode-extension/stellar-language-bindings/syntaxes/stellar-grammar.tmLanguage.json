@@ -1,0 +1,36 @@
+{
+  "name": "stellar",
+  "scopeName": "source.stellar",
+  "fileTypes": [".stellar", ".stl"],
+  "patterns": [
+    {
+      "name": "keyword.control",
+      "match": "\\b(table|from|filter|directly|let|if|everywhere|not|and|or|contains|like|export|to)\\b"
+    },
+    {
+      "name": "entity.name.function",
+      "match": "\\b[A-Za-z_][A-Za-z_0-9]*\\b(?=\\()"
+    },
+    {
+      "name": "entity.name.type",
+      "match": "\\b(int|float|str|bool|date|datetime)\\b"
+    },
+    {
+      "name": "string.quoted.double",
+      "begin": "\"",
+      "end": "\""
+    },
+    {
+      "name": "constant.numeric",
+      "match": "\\b[0-9]+\\.?[0-9]*\\b"
+    },
+    {
+      "name": "keyword.operator",
+      "match": "\\b(<=|>=|=|!=|<|>|\\+|\\-|\\*|\\/|like|contains)\\b"
+    },
+    {
+      "name": "variable",
+      "match": "\\b[A-Za-z_][A-Za-z_0-9]*\\b"
+    }
+  ]
+}

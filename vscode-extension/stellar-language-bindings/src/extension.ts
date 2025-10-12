@@ -16,7 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const disposable = vscode.commands.registerCommand('stellar-language-bindings.helloWorld', () => {
 		// The code you place here will be executed every time your command is executed
 		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from STELLAR Language Bindings!');
+		vscode.window.showInformationMessage('Hello World from Stellar Language Bindings!');
 	});
 
 	context.subscriptions.push(disposable);
