@@ -10,7 +10,18 @@ syntax = """
 
 @@grammar::TableTransformer
 
-start = table_def filters:filters   transformations:transformations  export_defs:export_defs $;
+start = 
+    table_def:table_def 
+        filters:filters 
+        transformations:transformations
+        export_defs:export_defs $ |
+    table_def:table_def
+        transformations:transformations
+        export_defs:export_defs $ |
+    table_def:table_def
+        export_defs:export_defs $ |
+    table_def:table_def $
+    ;
 
 table_def = "table" name:table_name "{" defs:column_defs "}" "from" src:table_source ;
 filters = head:filter tail:filters | "directly" | head:filter ;
@@ -114,6 +125,40 @@ class StellarFunction:
     def __call__(self, *args):
         return self.evaluate()(*args)
 
+
+class StellarExecution:
+    def __init__(self, 
+        table_loader,
+        filters: list,
+        transformations: list,
+        exporters: list):  
+        self.table_loader = table_loader
+        self.filters = filters
+        self.transformations = transformations
+        self.exporters = exporters
+
+    def execute(self):
+        df = self.load_table()
+        df = self.apply_filters(df)
+        df = self.apply_transformations(df)
+        for exporter in self.exporters:
+            exporter(df)
+        return df
+    
+    def load_table(self):
+        return self.table_loader()
+    
+    def apply_filters(self, df):
+        for filter in self.filters:
+            df = filter(df)
+        return df
+
+    def apply_transformations(self, df):
+        for transformation in self.transformations:
+            df = transformation(df)
+        return df
+
+
 class Semantics:
 
     def __init__(self):
@@ -124,62 +169,69 @@ class Semantics:
     
 
     def table_def(self, ast):
-        self.tn = ast.name 
-        for column_name, column_type, new_column_name in ast.defs:
-            self.columns[column_name] = column_type
-        schema, location, options = ast.src
-        print("schema: ", schema)
-        print("location: ", location)
-        print("options: ", options)
-        if schema == 'file' and location.endswith('.csv'):
-            self.df = pd.read_csv(location, **options)
-        elif schema == 'file' and location.endswith('.xlsx') or location.endswith('.xls'):
-            self.df = pd.read_excel(location, dtype=str, **options)
-        elif schema == 'db':
-            pass 
-        elif schema == 'api':
-            pass
-        elif schema == 'gdrive':
-            pass
-        elif schema == "exec":
-            import subprocess 
-            cmd = location
-            if "output" not in options:
-                args = options.get("args", "")
-                if "args" in options:
-                    del options["args"]
-                self.df = subprocess.check_output(cmd +" "+ args, shell=True, **options)
-            else:
-                args = options.get("args", "")
-                if "args" in options:
-                    del options["args"]
-                output = options["output"]
-                del options["output"]
-                subprocess.run(cmd + " " + args, shell=True, **options)
-                self.df = pd.read_csv(output)
-        for column_name, column_type, new_column_name in ast.defs:
-            if column_name not in self.df.columns:
-                self.df[column_name] = eval(column_type)()
-            if not isinstance(column_type, str):
-                converter = column_type(self.df)
-                self.df[column_name] = self.df[column_name].apply(converter)
-            else:
-                if column_type == 'date':
-                    self.df[column_name] = self.df[column_name].apply(lambda x: datetime.date(*map(int, x.split('-'))))
-                elif column_type == 'datetime':
-                    self.df[column_name] = pd.to_datetime(self.df[column_name])
-                elif column_type == 'int':
-                    self.df[column_name] = self.df[column_name].astype(int)
-                elif column_type == 'float':
-                    self.df[column_name] = self.df[column_name].astype(float)
-                elif column_type == 'str':
-                    self.df[column_name] = self.df[column_name].apply(lambda x: str(x) if not pd.isna(x) else "")
-                    self.df[column_name] = self.df[column_name].astype(str)
-                elif column_type == 'bool':
-                    self.df[column_name] = self.df[column_name].astype(bool)
-            if new_column_name != column_name:
-                self.df.rename(columns={column_name: new_column_name}, inplace=True)
-        return self.df
+        def loader():
+            self.tn = ast.name 
+            columns = {}
+            for column_name, column_type, new_column_name in ast.defs:
+                columns[column_name] = column_type
+            schema, location, options = ast.src
+            print("schema: ", schema)
+            print("location: ", location)
+            print("options: ", options)
+            if schema == 'file' and location.endswith('.csv'):
+                df = pd.read_csv(location, **options)
+            elif schema == 'file' and location.endswith('.xlsx') or location.endswith('.xls'):
+                df = pd.read_excel(location, dtype=str, **options)
+            elif schema == 'db':
+                pass 
+            elif schema == 'api':
+                pass
+            elif schema == 'gdrive':
+                pass
+            elif schema == "exec":
+                import subprocess 
+                cmd = location
+                if "output" not in options:
+                    args = options.get("args", "")
+                    if "args" in options:
+                        del options["args"]
+                    df = subprocess.check_output(
+                        cmd +" "+ args, 
+                        shell=True, 
+                        **options
+                    )
+                else:
+                    args = options.get("args", "")
+                    if "args" in options:
+                        del options["args"]
+                    output = options["output"]
+                    del options["output"]
+                    subprocess.run(cmd + " " + args, shell=True, **options)
+                    df = pd.read_csv(output)
+            for column_name, column_type, new_column_name in ast.defs:
+                if column_name not in df.columns:
+                    df[column_name] = eval(column_type)()
+                if not isinstance(column_type, str):
+                    converter = column_type(df)
+                    df[column_name] = df[column_name].apply(converter)
+                else:
+                    if column_type == 'date':
+                        df[column_name] = df[column_name].apply(lambda x: datetime.date(*map(int, x.split('-'))))
+                    elif column_type == 'datetime':
+                        df[column_name] = pd.to_datetime(df[column_name])
+                    elif column_type == 'int':
+                        df[column_name] = df[column_name].astype(int)
+                    elif column_type == 'float':
+                        df[column_name] = df[column_name].astype(float)
+                    elif column_type == 'str':
+                        df[column_name] = df[column_name].apply(lambda x: str(x) if not pd.isna(x) else "")
+                        df[column_name] = df[column_name].astype(str)
+                    elif column_type == 'bool':
+                        df[column_name] = df[column_name].astype(bool)
+                if new_column_name != column_name:
+                    df.rename(columns={column_name: new_column_name}, inplace=True)
+            return df 
+        return loader
     
     def column_def(self, ast):
         return ast.name, ast.type, ast.renamed if ast.renamed is not None else ast.name
@@ -244,15 +296,17 @@ class Semantics:
         return f
     
     def start(self, ast):
-        filters = ast.filters 
-        for filter in filters:
-            self.df = filter(self.df)
-        transformations = ast.transformations
-        for transformation in transformations:
-            self.df = transformation(self.df)
-        for exporter in ast.export_defs:
-            exporter(self.df)
-        return ast
+        table_loader = ast.table_def
+        filters = ast.filters or []
+        transformations = ast.transformations or []
+        exporters = ast.export_defs or []
+        execution = StellarExecution(
+            table_loader=table_loader,
+            filters=filters,
+            transformations=transformations,
+            exporters=exporters
+        )
+        return execution
     
     def string(self, ast):
         return "".join(ast[1:-1])
@@ -389,7 +443,7 @@ class Semantics:
             if name != self.tn:
                 raise ValueError(f"Export table name {name} does not match the table name {self.table_name}")
             schema, location, options = ast.src
-            columns = self.df.columns
+            columns = df.columns
             if "columns" in options:
                 columns = options["columns"].split(",")
                 del options["columns"]
@@ -477,15 +531,10 @@ def parse(text):
     text = re.sub(r'#.*', '', text)
     return parser.parse(text)
 
-def transform(parsed):
-    return parsed
-
-def export(parsed):
-    return parsed
 
 def run(text):
-    parsed = parse(text)
-    transformed = transform(parsed)
-    exported = export(transformed)
+    execution = parse(text)
+    print("Starting execution...")
+    exported = execution.execute()
     return exported
 
