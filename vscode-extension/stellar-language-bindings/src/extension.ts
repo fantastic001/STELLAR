@@ -1,6 +1,10 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import * as net from "net";
+import * as vscode from "vscode";
+import { LanguageClient, LanguageClientOptions, ServerOptions } from "vscode-languageclient/node";
+
+let client: LanguageClient;
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -20,7 +24,24 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	context.subscriptions.push(disposable);
+
+	const serverOptions: ServerOptions = () => {
+    const socket = net.connect({ host: "127.0.0.1", port: 5000 });
+    return Promise.resolve({
+      reader: socket,
+      writer: socket,
+    });
+  };
+
+  const clientOptions: LanguageClientOptions = {
+    documentSelector: [{ scheme: "file", language: "stellar" }],
+  };
+
+  client = new LanguageClient("my-lsp", "My LSP (TCP)", serverOptions, clientOptions);
+  client.start();
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+
+export function deactivate(): Thenable<void> | undefined {
+  return client ? client.stop() : undefined;
+}
