@@ -538,3 +538,16 @@ def run(text):
     exported = execution.execute()
     return exported
 
+def partial_parse(text):
+    while len(text) > 0:
+        try:
+            result =  parse(text)
+            print("Partial parse successful.")
+            print(text)
+            return result
+        except tatsu.exceptions.FailedParse as e:
+            # remove last line
+            lines = text.splitlines()
+            lines = lines[:-1]
+            text = "\n".join(lines)
+    return None
