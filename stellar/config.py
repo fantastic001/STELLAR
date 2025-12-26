@@ -17,7 +17,6 @@ PROJECT_ENVVAR_PREFIX = PROJECT_NAME.upper()
 CONFIG_FILE_NAME = PROJECT_NAME + ".json"
 DEFAULT_PLUGINS = [
     "stellar.functions.*",
-    "stellar.schemas.*",
     "stellar.types.*"    
 ]
 
