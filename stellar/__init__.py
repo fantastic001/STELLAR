@@ -159,6 +159,18 @@ class StellarExecution:
         return df
 
 
+def get_available_functions():
+    functions = {}
+    for f in get_classes_inheriting(StellarFunction):
+        functions[f().name()] = f()
+    return functions
+
+def get_available_types():
+    types = {}
+    for t in get_classes_inheriting(StellarType):
+        types[t().name()] = t()
+    return types
+
 class Semantics:
 
     def __init__(self):
@@ -395,10 +407,8 @@ class Semantics:
     def function(self, ast):
         name = ast.name
         fs = {}
-        for f in get_classes_inheriting(StellarFunction):
-            fs[f().name()] = f()
-        for t in get_classes_inheriting(StellarType):
-            fs[t().name()] = t()
+        fs.update(get_available_functions())
+        fs.update(get_available_types())
         def f(df):
             args = []
             if ast.args is not None:
