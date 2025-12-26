@@ -1,4 +1,5 @@
 
+from ast import Tuple
 import tatsu 
 import pandas as pd 
 import datetime 
@@ -548,16 +549,16 @@ def run(text):
     exported = execution.execute()
     return exported
 
-def partial_parse(text):
-    while len(text) > 0:
+def partial_parse(text) -> tuple[StellarExecution, str, str]:
+    parsed_text = text 
+    while len(parsed_text) > 0:
         try:
-            result =  parse(text)
-            print("Partial parse successful.")
-            print(text)
-            return result
+            result =  parse(parsed_text)
+            remaining = text[len(parsed_text):]
+            return result, parsed_text, remaining
         except tatsu.exceptions.FailedParse as e:
             # remove last line
-            lines = text.splitlines()
+            lines = parsed_text.splitlines()
             lines = lines[:-1]
-            text = "\n".join(lines)
-    return None
+            parsed_text = "\n".join(lines)
+    return None, None, text
