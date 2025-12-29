@@ -164,7 +164,18 @@ class ListHasFunction(StellarFunction):
         return lambda column, value: column.apply(lambda x: value in x if x is not None else False)
     def name(self):
         return "list_has"
-    
+
+class ListIndexFunction(StellarFunction):
+    def evaluate(self):
+        return lambda column, value: column.apply(lambda x: x.items.index(value) if x is not None and value in x else -1)
+    def name(self):
+        return "indexof"
+
+class ListElementFunction(StellarFunction):
+    def evaluate(self):
+        return lambda column, index: column.apply(lambda x: x[index] if x is not None and 0 <= index < len(x) else None)
+    def name(self):
+        return "element"
 
 class StellarList:
     def __init__(self, items):
