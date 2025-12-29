@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stellar-lang"
+version = "0.1.1"
+description = "STELLAR: A Simple Tool for Exploring and Analyzing Tabulated Data in Python"
+authors = [
+    { name="Stefan Nožinić", email="stefan@lugons.org" }
+]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "pandas",
+    "numpy",
+    "tabulate",
+    "pygls",
+    "tatsu"
+]
+
+[project.scripts]
+stellar = "stellar.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["stellar*"]
