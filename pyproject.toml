@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stellar-lang"
-version = "0.1.1"
+version = "0.1.2"
 description = "STELLAR: A Simple Tool for Exploring and Analyzing Tabulated Data in Python"
 authors = [
     { name="Stefan Nožinić", email="stefan@lugons.org" }
@@ -16,7 +16,8 @@ dependencies = [
     "numpy",
     "tabulate",
     "pygls",
-    "tatsu"
+    "tatsu",
+    "orgasm-package"
 ]
 
 [project.scripts]
