@@ -2,3 +2,4 @@ tatsu
 pandas
 tabulate
 pygls
+orgasm-package
