@@ -26,30 +26,32 @@ export function activate(context: vscode.ExtensionContext) {
 
 
 		const exec = require('child_process').exec;
-		exec('command -v stellar', (err: any, stdout: string) => {
-			if (err || !stdout) {
-				vscode.window.showErrorMessage('The "stellar" command cannot be found in your PATH. Please install Stellar CLI.');
-				return;
-			}
+			const config = vscode.workspace.getConfiguration('stellarLanguageBindings');
+			const stellarPath = config.get<string>('stellarPath', 'stellar');
+			exec(`command -v ${stellarPath}`, (err: any, stdout: string) => {
+				if (err || !stdout) {
+					vscode.window.showErrorMessage(`The command '${stellarPath}' cannot be found in your PATH. Please install Stellar CLI or set the correct path in the extension settings.`);
+					return;
+				}
 
-			const serverOptions: ServerOptions = {
-				command: 'stellar',
-				args: ['lsp_stdio'],
-				options: {},
-			};
+				const serverOptions: ServerOptions = {
+					command: stellarPath,
+					args: ['lsp_stdio'],
+					options: {},
+				};
 
-			const clientOptions: LanguageClientOptions = {
-				documentSelector: [{ scheme: "file", language: "stellar" }],
-			};
+				const clientOptions: LanguageClientOptions = {
+					documentSelector: [{ scheme: "file", language: "stellar" }],
+				};
 
-			client = new LanguageClient(
-				"stellar-lsp",
-				"Stellar Language Server (stdio)",
-				serverOptions,
-				clientOptions
-			);
-			client.start();
-		});
+				client = new LanguageClient(
+					"stellar-lsp",
+					"Stellar Language Server (stdio)",
+					serverOptions,
+					clientOptions
+				);
+				client.start();
+			});
 }
 
 

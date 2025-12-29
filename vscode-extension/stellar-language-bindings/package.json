@@ -15,6 +15,17 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Stellar Language Bindings",
+      "properties": {
+        "stellarLanguageBindings.stellarPath": {
+          "type": "string",
+          "default": "stellar",
+          "description": "Path to the stellar executable (default: 'stellar'). Set this if stellar is not in your PATH."
+        }
+      }
+    },
     "commands": [
       {
         "command": "stellar-language-bindings.helloWorld",
