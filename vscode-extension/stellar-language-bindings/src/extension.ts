@@ -1,6 +1,5 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import * as net from "net";
 import * as vscode from "vscode";
 import { LanguageClient, LanguageClientOptions, ServerOptions } from "vscode-languageclient/node";
 
@@ -25,20 +24,32 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(disposable);
 
-	const serverOptions: ServerOptions = () => {
-    const socket = net.connect({ host: "127.0.0.1", port: 5000 });
-    return Promise.resolve({
-      reader: socket,
-      writer: socket,
-    });
-  };
 
-  const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: "file", language: "stellar" }],
-  };
+		const exec = require('child_process').exec;
+		exec('command -v stellar', (err: any, stdout: string) => {
+			if (err || !stdout) {
+				vscode.window.showErrorMessage('The "stellar" command cannot be found in your PATH. Please install Stellar CLI.');
+				return;
+			}
 
-  client = new LanguageClient("my-lsp", "My LSP (TCP)", serverOptions, clientOptions);
-  client.start();
+			const serverOptions: ServerOptions = {
+				command: 'stellar',
+				args: ['lsp_stdio'],
+				options: {},
+			};
+
+			const clientOptions: LanguageClientOptions = {
+				documentSelector: [{ scheme: "file", language: "stellar" }],
+			};
+
+			client = new LanguageClient(
+				"stellar-lsp",
+				"Stellar Language Server (stdio)",
+				serverOptions,
+				clientOptions
+			);
+			client.start();
+		});
 }
 
 
