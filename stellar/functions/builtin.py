@@ -147,3 +147,50 @@ class CapitalizeFunction(StellarFunction):
     def name(self):
         return "capitalize"
 
+class ListFunction(StellarFunction):
+    def evaluate(self):
+        return lambda *args: StellarList(args)
+    def name(self):
+        return "list"
+
+class ListAppendFunction(StellarFunction):
+    def evaluate(self):
+        return lambda column, value: column.apply(lambda x: x.append(value) if x is not None else StellarList([value]))
+    def name(self):
+        return "append"
+
+class ListHasFunction(StellarFunction):
+    def evaluate(self):
+        return lambda column, value: column.apply(lambda x: value in x if x is not None else False)
+    def name(self):
+        return "list_has"
+    
+
+class StellarList:
+    def __init__(self, items):
+        self.items = list(items)
+    
+    def __len__(self):
+        return len(self.items)
+    
+    def __getitem__(self, index):
+        return self.items[index]
+    
+    def __add__(self, other):
+        if isinstance(other, list):
+            return StellarList(self.items + other)
+        elif isinstance(other, StellarList):
+            return StellarList(self.items + other.items)
+        else:
+            raise TypeError("Can only add list or StellarList to StellarList")
+    
+    def append(self, item):
+        return StellarList(self.items + [item])
+    def __repr__(self):
+        return f"StellarList({self.items})"
+    
+    def to_list(self):
+        return self.items
+    
+    def __contains__(self, item):
+        return item in self.items

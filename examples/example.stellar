@@ -18,9 +18,15 @@ print value
 let value = value * 1.2 everywhere
 let mean = mean(value) everywhere 
 
+let myarr = list(1,2,3) everywhere
+let myarr_len = len(myarr) everywhere 
+let myarr = append(myarr, 5) if value > mean(value)
+
+
 export sales to "file://sales_transformed.csv"
 export sales to "screen" {
     groupby: "date"
     operation: "mean"
     target: "value"
 }
+export sales to "screen" 
