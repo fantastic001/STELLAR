@@ -1,3 +1,6 @@
+use dummy (
+    arg1: "haha"
+)
 table sales {
     id: int,
     date: date,
@@ -22,7 +25,7 @@ let myarr = list(1,2,3) everywhere
 let myarr_len = len(myarr) everywhere 
 let myarr = append(myarr, 5) if value > mean(value)
 
-
+let myarr = dummy() everywhere 
 export sales to "file://sales_transformed.csv"
 export sales to "screen" {
     groupby: "date"

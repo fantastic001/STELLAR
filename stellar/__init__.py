@@ -4,7 +4,7 @@ import tatsu
 import pandas as pd 
 import datetime 
 from stellar.config import get_classes_inheriting
-
+import importlib
 
 syntax = """
 
@@ -13,8 +13,10 @@ syntax = """
 
 start = imports:imports body:body | body:body ;
 imports = head:use_statement tail:imports | head:use_statement ;
-use_statement = "use" module:string | "use" module:string "(" module_options:options ")"
-    ;
+use_statement = "use" module:identifier "(" module_options:options ")" | 
+                "use" module:identifier
+            ;
+identifier = /[A-Za-z_][A-Za-z_0-9]*/ ;
 
 body = 
     table_def:table_def 
@@ -145,6 +147,16 @@ class StellarExecution:
         self.transformations = transformations
         self.exporters = exporters
         self.imports = imports
+        self.functions = get_available_functions()
+        self.types = get_available_types()
+        for name, options in imports.items():
+            module = importlib.import_module("stellar.modules."+name)
+            if hasattr(module, "register"):
+                module.register(self, **options)
+            else:
+                raise ValueError(
+                    f"Module {name} does not have register function"
+                )
 
     def with_imports(self, imports: dict):
         return StellarExecution(
@@ -175,7 +187,12 @@ class StellarExecution:
         for transformation in self.transformations:
             df = transformation(self, df)
         return df
-
+    
+    def register_function(self, func: StellarFunction):
+        self.functions[func.name()] = func
+    
+    def register_type(self, type_: StellarType):
+        self.types[type_.name()] = type_
 
 def get_available_functions():
     functions = {}
@@ -209,20 +226,19 @@ class Semantics:
         module_options = {}
         if hasattr(ast, "module_options") and ast.module_options is not None:
             module_options = ast.module_options
-        module = __import__(module_name)
-        if hasattr(module, "register"):
-            return module_name, module, module_options
-        else:
-            raise ValueError(f"Module {module_name} does not have register function")
+        return module_name, module_options
     
     def imports(self, ast):
         imports = {}
         if ast.tail is None:
-            imports[ast.head[0]] = (ast.head[1], ast.head[2])
+            imports[ast.head[0]] = (ast.head[1])
         else:
-            imports[ast.head[0]] = (ast.head[1], ast.head[2])
+            imports[ast.head[0]] = (ast.head[1])
             imports.update(ast.tail)
         return imports
+    
+    def identifier(self, ast):
+        return ast
 
     def table_def(self, ast):
         def loader():
@@ -451,9 +467,9 @@ class Semantics:
     def function(self, ast):
         name = ast.name
         fs = {}
-        fs.update(get_available_functions())
-        fs.update(get_available_types())
         def f(ctx, df):
+            fs.update(ctx.functions)
+            fs.update(ctx.types)
             args = []
             if ast.args is not None:
                 args = [arg(ctx, df) for arg in ast.args]
