@@ -11,7 +11,12 @@ syntax = """
 
 @@grammar::TableTransformer
 
-start = 
+start = imports:imports body:body | body:body ;
+imports = head:use_statement tail:imports | head:use_statement ;
+use_statement = "use" module:string | "use" module:string "(" module_options:options ")"
+    ;
+
+body = 
     table_def:table_def 
         filters:filters 
         transformations:transformations
@@ -132,11 +137,23 @@ class StellarExecution:
         table_loader,
         filters: list,
         transformations: list,
-        exporters: list):  
+        exporters: list,
+        imports: dict = {}
+    ):  
         self.table_loader = table_loader
         self.filters = filters
         self.transformations = transformations
         self.exporters = exporters
+        self.imports = imports
+
+    def with_imports(self, imports: dict):
+        return StellarExecution(
+            table_loader=self.table_loader,
+            filters=self.filters,
+            transformations=self.transformations,
+            exporters=self.exporters,
+            imports=imports
+        )
 
     def execute(self):
         df = self.load_table()
@@ -151,12 +168,12 @@ class StellarExecution:
     
     def apply_filters(self, df):
         for filter in self.filters:
-            df = filter(df)
+            df = filter(self, df)
         return df
 
     def apply_transformations(self, df):
         for transformation in self.transformations:
-            df = transformation(df)
+            df = transformation(self, df)
         return df
 
 
@@ -180,6 +197,32 @@ class Semantics:
         self.export = None
         self.df = None 
     
+    def start(self, ast):
+        body = ast.body
+        imports = {}
+        if ast.imports is not None:
+            imports = ast.imports
+        return body.with_imports(imports)
+
+    def use_statement(self, ast):
+        module_name = ast.module
+        module_options = {}
+        if hasattr(ast, "module_options") and ast.module_options is not None:
+            module_options = ast.module_options
+        module = __import__(module_name)
+        if hasattr(module, "register"):
+            return module_name, module, module_options
+        else:
+            raise ValueError(f"Module {module_name} does not have register function")
+    
+    def imports(self, ast):
+        imports = {}
+        if ast.tail is None:
+            imports[ast.head[0]] = (ast.head[1], ast.head[2])
+        else:
+            imports[ast.head[0]] = (ast.head[1], ast.head[2])
+            imports.update(ast.tail)
+        return imports
 
     def table_def(self, ast):
         def loader():
@@ -261,8 +304,8 @@ class Semantics:
     
     def filter(self, ast):
         condition = ast.condition
-        def f(df):
-            result = condition(df)
+        def f(ctx, df):
+            result = condition(ctx, df)
             return df[result]
         return f
     
@@ -278,13 +321,13 @@ class Semantics:
     
     def transformation(self, ast):
         if ast.debug is not None and ast.condition is None:
-            def f(df):
+            def f(ctx, df):
                 print(df[ast.col])
                 print("Columns in dataframe: " , df.columns)
                 return df
             return f
         if ast.debug is not None and ast.condition is not None:
-            def f(df):
+            def f(ctx, df):
                 from pprint import pprint
                 result = df[ast.condition(df)]
                 for index, row in result.iterrows():
@@ -295,12 +338,12 @@ class Semantics:
         name = ast.name
         expression = ast.val
         condition = ast.condition
-        def f(df):
-            result = expression(df)
+        def f(ctx, df):
+            result = expression(ctx, df)
             if condition is not None:
                 if name not in df.columns:
-                    df[name] = pd.NA 
-                df.loc[condition(df), name] = result
+                    df[name] = pd.NA
+                df.loc[condition(ctx, df), name] = result
             else:
                 if name not in df.columns:
                     df[name] = pd.NA
@@ -308,7 +351,7 @@ class Semantics:
             return df
         return f
     
-    def start(self, ast):
+    def body(self, ast):
         table_loader = ast.table_def
         filters = ast.filters or []
         transformations = ast.transformations or []
@@ -355,39 +398,39 @@ class Semantics:
             return ast.func
     
     def expression(self, ast):
-        def f(df):
+        def f(ctx, df):
             if ast.op is None:
-                return ast.left(df)
+                return ast.left(ctx, df)
             left = ast.left
             right = ast.right
             if ast.op == '+':
-                return left(df) + right(df)
+                return left(ctx, df) + right(ctx, df)
             elif ast.op == '-':
-                return left(df) - right(df)
+                return left(ctx, df) - right(ctx, df)
         return f
         
     def term(self, ast):
-        def f(df):
+        def f(ctx, df):
             if ast.op is None:
-                return ast.left(df)
+                return ast.left(ctx, df)
             left = ast.left
             right = ast.right
             if ast.op == '*':
-                return left(df) * right(df)
+                return left(ctx, df) * right(ctx, df)
             elif ast.op == '/':
-                return left(df) / right(df)
+                return left(ctx, df) / right(ctx, df)
         return f
     
     def factor(self, ast):
-        def f(df):
+        def f(ctx, df):
             if ast.column_name is not None:
                 return df[ast.column_name]
             elif ast.value is not None:
                 return ast.value
             elif ast.function is not None:
-                return ast.function(df)
+                return ast.function(ctx, df)
             elif ast.expression is not None:
-                return ast.expression(df)
+                return ast.expression(ctx, df)
         return f
     
     def value(self, ast):
@@ -410,10 +453,10 @@ class Semantics:
         fs = {}
         fs.update(get_available_functions())
         fs.update(get_available_types())
-        def f(df):
+        def f(ctx, df):
             args = []
             if ast.args is not None:
-                args = [arg(df) for arg in ast.args]
+                args = [arg(ctx, df) for arg in ast.args]
             return fs[name](*args)
         return f
     
@@ -501,25 +544,25 @@ class Semantics:
         return [ast.head] + ast.tail
 
     def condition_expr(self, ast):
-        def f(df):
+        def f(ctx, df):
             if ast.rel is None and ast.left is not None:
-                return ast.left(df)
+                return ast.left(ctx, df)
             left = ast.left
             right = ast.right
             if ast.rel == 'and':
-                return left(df) & right(df)
+                return left(ctx, df) & right(ctx, df)
             elif ast.rel == 'or':
-                return left(df) | right(df)
+                return left(ctx, df) | right(ctx, df)
             elif ast.rel == 'not':
-                return ~ast.negated(df)
+                return ~ast.negated(ctx, df)
         return f
     
     def condition_factor(self, ast):
-        def f(df):
+        def f(ctx, df):
             if ast.name is not None:
-                return ast.op(df[ast.name], ast.expression(df))
+                return ast.op(df[ast.name], ast.expression(ctx, df))
             else:
-                return ast.factor(df)
+                return ast.factor(ctx, df)
         return f
 
     def option(self, ast):
